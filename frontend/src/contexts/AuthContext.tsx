@@ -84,44 +84,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const register = async (userData: RegisterData): Promise<boolean> => {
     try {
-      // Check if user already exists
-      const allUsers = [...mockUsers, ...registeredUsers];
-      const existingUser = allUsers.find(u => u.email === userData.email);
-      
-      if (existingUser) {
-        return false; // User already exists
+      const response = await fetch('http://localhost:8081/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (response.ok) {
+        const result = await response.text();
+        console.log('Registration successful:', result);
+        return true;
+      } else {
+        const error = await response.text();
+        console.error('Registration failed:', error);
+        return false;
       }
-
-      // Generate a new user ID
-      const newUserId = `${userData.role}-${Date.now()}`;
-      
-      // Create new user object
-      const newUser: User = {
-        id: newUserId,
-        name: `${userData.firstName} ${userData.lastName}`,
-        email: userData.email,
-        role: userData.role,
-        joinDate: new Date().toISOString().split('T')[0],
-        lastActivity: new Date().toISOString(),
-        // Add default values for user role
-        ...(userData.role === 'user' && {
-          industry: 'Other', // Default industry
-          creditScore: 0, // Will be calculated later
-          businessName: `${userData.firstName}'s Business`,
-          location: 'Not specified',
-          yearsInBusiness: 0,
-          applicationStatus: 'pending' as const
-        })
-      };
-
-      // Add to registered users
-      const updatedRegisteredUsers = [...registeredUsers, newUser];
-      setRegisteredUsers(updatedRegisteredUsers);
-      
-      // Save to localStorage
-      localStorage.setItem('hevaRegisteredUsers', JSON.stringify(updatedRegisteredUsers));
-      
-      return true;
     } catch (error) {
       console.error('Registration error:', error);
       return false;
