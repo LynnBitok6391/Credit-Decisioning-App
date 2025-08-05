@@ -1,39 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
+interface LoginFormData {
+  email: string;
+  password: string;
+  role: 'admin' | 'user';
+}
+
 export function Login() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [role, setRole] = useState<'admin' | 'user'>('user');
+  const [formData, setFormData] = useState<LoginFormData>({
+    email: '',
+    password: '',
+    role: 'user'
+  });
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  const { login, register } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setFirstName('');
-    setLastName('');
-    setRole('user');
-    setError('');
-    setSuccess('');
-  };
+  // Ensure user is logged out on component mount
+  useEffect(() => {
+    logout(); // Clear any existing session
+  }, [logout]);
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    resetForm();
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,289 +44,249 @@ export function Login() {
     setSuccess('');
 
     try {
-      if (isLogin) {
-        // Login logic
-        const success = await login(email, password, role);
-        if (success) {
-          navigate(role === 'admin' ? '/admin/dashboard' : '/user/dashboard');
-        } else {
-          setError('Invalid credentials. Please try again.');
-        }
+      const success = await login(formData.email, formData.password, formData.role);
+      if (success) {
+        setSuccess('Login successful! Redirecting...');
+        setTimeout(() => {
+          navigate(formData.role === 'admin' ? '/admin/dashboard' : '/user/dashboard');
+        }, 1000);
       } else {
-        // Registration logic
-        if (password !== confirmPassword) {
-          setError('Passwords do not match.');
-          return;
-        }
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters long.');
-          return;
-        }
-
-        const success = await register({
-          email,
-          password,
-          firstName,
-          lastName,
-          role
-        });
-        
-        if (success) {
-          setSuccess('Account created successfully! You can now sign in.');
-          setIsLogin(true);
-          resetForm();
-        } else {
-          setError('Registration failed. Email may already be in use.');
-        }
+        setError('Invalid credentials. Please check your email and password.');
       }
     } catch (err) {
-      setError(isLogin ? 'Login failed. Please try again.' : 'Registration failed. Please try again.');
+      setError('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const fillDemoCredentials = (demoRole: 'admin' | 'user') => {
-    setRole(demoRole);
     if (demoRole === 'admin') {
-      setEmail('admin@heva.com');
-      setPassword('admin123');
+      setFormData({
+        email: 'admin@heva.com',
+        password: 'admin123',
+        role: 'admin'
+      });
     } else {
-      setEmail('emma@example.com');
-      setPassword('user123');
+      setFormData({
+        email: 'emma@example.com',
+        password: 'user123',
+        role: 'user'
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        {/* Logo */}
+        {/* Logo and Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center space-x-2">
-            <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">H</span>
+          <motion.div
+            initial={{ y: -20 }}
+            animate={{ y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center space-x-3"
+          >
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <span className="text-white font-bold text-2xl">H</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">HEVA</h1>
-              <p className="text-sm text-gray-600">Credit Scoring Platform</p>
+              <h1 className="text-3xl font-bold text-white">HEVA</h1>
+              <p className="text-sm text-gray-300">Credit Scoring Platform</p>
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                {isLogin ? 'Welcome Back' : 'Create Account'}
-              </h2>
-              <p className="text-gray-600">
-                {isLogin ? 'Sign in to your account' : 'Join HEVA to get started'}
-              </p>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-                {success}
-              </div>
-            )}
-
-            {/* Name fields for registration */}
-            {!isLogin && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="First name"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Last name"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Account Type
-              </label>
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="user"
-                    checked={role === 'user'}
-                    onChange={(e) => setRole(e.target.value as 'user')}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">Creative Professional</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="admin"
-                    checked={role === 'admin'}
-                    onChange={(e) => setRole(e.target.value as 'admin')}
-                    className="mr-2"
-                  />
-                  <span className="text-sm text-gray-700">Administrator</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your email"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your password"
-              />
-              {!isLogin && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Password must be at least 6 characters long
-                </p>
-              )}
-            </div>
-
-            {/* Confirm Password for registration */}
-            {!isLogin && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="bg-white/10 backdrop-blur-lg border-white/20 shadow-2xl">
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                  Confirm Password
-                </label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Confirm your password"
-                />
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              isLoading={isLoading}
-              className="w-full"
-              size="lg"
-            >
-              {isLogin ? 'Sign In' : 'Create Account'}
-            </Button>
-
-            {/* Toggle between login and register */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={toggleMode}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
-              >
-                {isLogin 
-                  ? "Don't have an account? Create one" 
-                  : "Already have an account? Sign in"
-                }
-              </button>
-            </div>
-
-            {/* Demo Buttons - only show for login */}
-            {isLogin && (
-              <div className="border-t border-gray-200 pt-6">
-                <p className="text-sm text-gray-600 text-center mb-4">
-                  Try the demo with sample credentials:
+                <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
+                <p className="text-gray-300">
+                  Sign in to access your account
                 </p>
-                <div className="space-y-2">
-                  <Button
+              </div>
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              {success && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-green-500/20 border border-green-500/50 text-green-200 px-4 py-3 rounded-lg"
+                >
+                  {success}
+                </motion.div>
+              )}
+
+              {/* Email Input */}
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-300">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your email"
+                  />
+                </div>
+              </div>
+
+              {/* Password Input with Visibility Toggle */}
+              <div className="space-y-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter your password"
+                  />
+                  <button
                     type="button"
-                    variant="outline"
-                    onClick={() => fillDemoCredentials('admin')}
-                    className="w-full"
-                    size="sm"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    Demo as Administrator
-                  </Button>
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Account Type
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="relative">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="user"
+                      checked={formData.role === 'user'}
+                      onChange={handleInputChange}
+                      className="sr-only"
+                    />
+                    <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.role === 'user' 
+                        ? 'border-blue-500 bg-blue-500/20' 
+                        : 'border-white/20 hover:border-white/40'
+                    }`}>
+                      <User className="w-5 h-5 mb-2 mx-auto text-gray-300" />
+                      <p className="text-sm text-center text-white">Creative Professional</p>
+                    </div>
+                  </label>
+                  <label className="relative">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="admin"
+                      checked={formData.role === 'admin'}
+                      onChange={handleInputChange}
+                      className="sr-only"
+                    />
+                    <div className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      formData.role === 'admin' 
+                        ? 'border-purple-500 bg-purple-500/20' 
+                        : 'border-white/20 hover:border-white/40'
+                    }`}>
+                      <Lock className="w-5 h-5 mb-2 mx-auto text-gray-300" />
+                      <p className="text-sm text-center text-white">Administrator</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Login Button */}
+              <Button
+                type="submit"
+                isLoading={isLoading}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-lg"
+                size="lg"
+              >
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </Button>
+
+              {/* Demo Credentials */}
+              <div className="border-t border-white/20 pt-6">
+                <p className="text-sm text-gray-300 text-center mb-4">
+                  Try demo accounts:
+                </p>
+                <div className="grid grid-cols-2 gap-3">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => fillDemoCredentials('user')}
-                    className="w-full"
+                    className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20"
                     size="sm"
                   >
-                    Demo as Creative Professional
+                    User Demo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fillDemoCredentials('admin')}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20"
+                    size="sm"
+                  >
+                    Admin Demo
                   </Button>
                 </div>
               </div>
-            )}
-          </form>
-        </Card>
 
-        {/* Features */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600 mb-4">
-            Specialized credit scoring for creative industries
+              {/* Security Notice */}
+              <div className="text-center">
+                <p className="text-xs text-gray-400">
+                  Your session will expire when you close the browser or log out
+                </p>
+              </div>
+            </form>
+          </Card>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 text-center"
+        >
+          <p className="text-sm text-gray-400">
+            Secure login • Encrypted connections • Protected data
           </p>
-          <div className="flex justify-center space-x-6 text-xs text-gray-500">
-            <span>Fashion</span>
-            <span>Film</span>
-            <span>Music</span>
-            <span>Digital Art</span>
-            <span>Performing Arts</span>
-          </div>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
