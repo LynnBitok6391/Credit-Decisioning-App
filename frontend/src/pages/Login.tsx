@@ -26,9 +26,10 @@ export function Login() {
   const { login, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Ensure user is logged out on component mount
+ 
   useEffect(() => {
-    logout(); // Clear any existing session
+    logout(); 
+    
   }, [logout]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -238,6 +239,17 @@ export function Login() {
               >
                 {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>
+
+              {/* Forgot Password Link */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
 
               {/* Demo Credentials */}
               <div className="border-t border-white/20 pt-6">

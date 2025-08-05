@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Lock, Mail, User, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, User, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -12,6 +12,13 @@ interface RegisterFormData {
   password: string;
   confirmPassword: string;
   role: 'admin' | 'user';
+}
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
 export function Register() {
@@ -27,14 +34,121 @@ export function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
   
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Password strength check
+  const getPasswordStrength = (password: string) => {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+    return strength;
+  };
+
+  const validateField = (name: string, value: string) => {
+    const newErrors = { ...errors };
+    
+    switch (name) {
+      case 'name':
+        if (!value.trim()) {
+          newErrors.name = 'Full name is required';
+        } else if (value.trim().length < 2) {
+          newErrors.name = 'Name must be at least 2 characters';
+        } else {
+          delete newErrors.name;
+        }
+        break;
+      case 'email':
+        if (!value) {
+          newErrors.email = 'Email is required';
+        } else if (!emailRegex.test(value)) {
+          newErrors.email = 'Please enter a valid email address';
+        } else {
+          delete newErrors.email;
+        }
+        break;
+      case 'password':
+        if (!value) {
+          newErrors.password = 'Password is required';
+        } else if (value.length < 6) {
+          newErrors.password = 'Password must be at least 6 characters';
+        } else if (getPasswordStrength(value) < 3) {
+          newErrors.password = 'Password is too weak';
+        } else {
+          delete newErrors.password;
+        }
+        break;
+      case 'confirmPassword':
+        if (!value) {
+          newErrors.confirmPassword = 'Please confirm your password';
+        } else if (value !== formData.password) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        } else {
+          delete newErrors.confirmPassword;
+        }
+        break;
+    }
+    
+    setErrors(newErrors);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear errors when user starts typing
+    if (errors[name as keyof FormErrors]) {
+      validateField(name, value);
+    }
+    
+    // Clear general error
     setError('');
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    validateField(name, value);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    
+    // Validate all fields
+    validateField('name', formData.name);
+    validateField('email', formData.email);
+    validateField('password', formData.password);
+    validateField('confirmPassword', formData.confirmPassword);
+    
+    // Check if there are any errors
+    const hasErrors = Object.keys(newErrors).length > 0 || 
+      !formData.name || 
+      !formData.email || 
+      !formData.password || 
+      !formData.confirmPassword;
+    
+    return !hasErrors;
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: 'user'
+    });
+    setErrors({});
+    setTouched({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,16 +156,17 @@ export function Register() {
     setIsLoading(true);
     setError('');
     setSuccess('');
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    
+    // Mark all fields as touched
+    setTouched({
+      name: true,
+      email: true,
+      password: true,
+      confirmPassword: true
+    });
+    
+    // Validate form
+    if (!validateForm()) {
       setIsLoading(false);
       return;
     }
@@ -70,14 +185,15 @@ export function Register() {
       
       if (success) {
         setSuccess('Registration successful! Redirecting to login...');
+        resetForm();
         setTimeout(() => {
           navigate('/login');
         }, 2000);
       } else {
-        setError('Registration failed. Email might already be registered.');
+        setError('This email address is already registered. Please use a different email or try logging in.');
       }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError('Registration failed. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
