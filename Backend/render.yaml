@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: heva-backend
+    env: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/creditdecisionapplication-0.0.1-SNAPSHOT.jar
+    rootDir: .
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 10000
