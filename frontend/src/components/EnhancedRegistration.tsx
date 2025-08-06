@@ -15,6 +15,8 @@ export function EnhancedRegistration({ onSuccess, onError }: EnhancedRegistratio
   const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<RegistrationError[]>([]);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState<boolean | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -87,6 +89,8 @@ export function EnhancedRegistration({ onSuccess, onError }: EnhancedRegistratio
       errors.push({ field: 'email', message: 'Email is required', type: 'validation' });
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
       errors.push({ field: 'email', message: 'Please enter a valid email address', type: 'validation' });
+    } else if (emailAvailable === false) {
+      errors.push({ field: 'email', message: 'This email is already registered', type: 'validation' });
     }
 
     // Password validation
@@ -102,6 +106,38 @@ export function EnhancedRegistration({ onSuccess, onError }: EnhancedRegistratio
     }
 
     return errors;
+  };
+
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailAvailable(null);
+      return;
+    }
+
+    setEmailChecking(true);
+    try {
+      const response = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+      const data = await response.json();
+      setEmailAvailable(data.available);
+    } catch (error) {
+      console.error('Error checking email availability:', error);
+      setEmailAvailable(null);
+    } finally {
+      setEmailChecking(false);
+    }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setFormData({ ...formData, email: newEmail });
+    
+    // Debounce email checking
+    const timeoutId = setTimeout(() => {
+      checkEmailAvailability(newEmail);
+    }, 500);
+    
+    // Clear previous timeout
+    return () => clearTimeout(timeoutId);
   };
 
   return (
@@ -138,16 +174,39 @@ export function EnhancedRegistration({ onSuccess, onError }: EnhancedRegistratio
 
         <div className="form-group">
           <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
-            className="form-control"
-            placeholder="Enter your email address"
-            title="Email Address"
-          />
+          <div className="relative">
+            <input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={handleEmailChange}
+              required
+              className={`form-control ${emailAvailable === false ? 'border-red-500' : emailAvailable === true ? 'border-green-500' : ''}`}
+              placeholder="Enter your email address"
+              title="Email Address"
+            />
+            {emailChecking && (
+              <div className="absolute right-3 top-3">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+              </div>
+            )}
+            {emailAvailable === true && (
+              <div className="absolute right-3 top-3 text-green-500">
+                ✓
+              </div>
+            )}
+            {emailAvailable === false && (
+              <div className="absolute right-3 top-3 text-red-500">
+                ✗
+              </div>
+            )}
+          </div>
+          {emailAvailable === false && (
+            <p className="text-red-500 text-sm mt-1">This email is already registered</p>
+          )}
+          {emailAvailable === true && (
+            <p className="text-green-500 text-sm mt-1">Email is available</p>
+          )}
         </div>
 
         <div className="form-group">
