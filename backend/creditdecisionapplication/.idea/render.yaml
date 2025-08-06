@@ -2,11 +2,13 @@ services:
   - type: web
     name: heva-backend
     env: docker
-    dockerfilePath: backend/creditdecisionapplication/.idea/Dockerfile
-    rootDir: ./backend/creditdecisionapplication/creditdecisionapplication/backend
+    dockerfilePath: ./Dockerfile
+    rootDir: .
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: PORT
         value: 10000
+
+
 
