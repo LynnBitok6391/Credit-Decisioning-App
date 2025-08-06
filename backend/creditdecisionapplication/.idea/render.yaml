@@ -2,13 +2,14 @@ services:
   - type: web
     name: Credit-Decisioning-App
     env: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: backend/creditdecisionapplication/.idea/Dockerfile
     rootDir: .
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: PORT
         value: 8081
+
 
 
 
