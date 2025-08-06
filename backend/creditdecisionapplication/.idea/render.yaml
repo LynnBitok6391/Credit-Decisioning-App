@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: heva-backend
+    name: Credit-Decisioning-App
     env: docker
     dockerfilePath: ./Dockerfile
     rootDir: .
@@ -9,6 +9,7 @@ services:
         value: prod
       - key: PORT
         value: 10000
+
 
 
 
