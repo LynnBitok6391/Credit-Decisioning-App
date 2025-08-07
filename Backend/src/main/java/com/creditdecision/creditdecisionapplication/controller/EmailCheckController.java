@@ -25,23 +25,33 @@ public class EmailCheckController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            // Normalize email for consistent checking
+            String normalizedEmail = emailValidationService.normalizeEmail(email);
+            
+            // Perform the check
             boolean isAvailable = emailValidationService.isEmailAvailable(email);
+            
             response.put("available", isAvailable);
             response.put("email", email);
+            response.put("normalizedEmail", normalizedEmail);
             
             if (!isAvailable) {
                 response.put("message", "This email address is already registered");
+                response.put("reason", "EMAIL_EXISTS");
             } else {
                 response.put("message", "Email address is available");
+                response.put("reason", "AVAILABLE");
             }
             
-            logger.info("Email availability check for {}: {}", email, isAvailable);
+            logger.info("Email availability check - Original: {}, Normalized: {}, Available: {}", 
+                       email, normalizedEmail, isAvailable);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error checking email availability for: {}", email, e);
             response.put("available", false);
             response.put("message", "Error checking email availability");
+            response.put("reason", "ERROR");
             return ResponseEntity.status(500).body(response);
         }
     }
